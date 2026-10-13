@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lord of Lillestrøm V7 – Touch Edition</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;overflow:hidden;background:#081012;color:#e9e3cd;font:14px system-ui,Arial,sans-serif}
+canvas{display:block;width:100vw;height:100vh;cursor:crosshair;touch-action:none}
+#top{position:fixed;top:0;left:0;right:0;height:52px;background:linear-gradient(#141d1fe9,#0e1518ea);border-bottom:1px solid #7e6f47;display:flex;align-items:center;gap:18px;padding:0 16px;pointer-events:none;z-index:3}
+#top b{color:#efcf8b;font-size:18px;letter-spacing:.8px}
+#tip{position:fixed;left:12px;top:60px;max-width:560px;background:#0b1114c7;padding:9px 12px;border-radius:7px;color:#efe3b8;z-index:3;pointer-events:none}
+#bottom{position:fixed;left:0;right:0;bottom:0;min-height:116px;background:#10181be8;border-top:2px solid #8f7648;display:flex;gap:14px;align-items:center;padding:10px 15px;z-index:3}
+#portrait{width:220px;flex:none;color:#e4c87f;font-weight:700}
+#details{flex:1;line-height:1.5;color:#d1d5cb}
+#actions{display:flex;flex-wrap:wrap;gap:7px;max-width:680px}
+button{background:linear-gradient(#3b4a4e,#223135);color:#f5e8c9;border:1px solid #8f8057;border-radius:6px;padding:9px 12px;font-weight:700;cursor:pointer}
+button:hover{background:#51686a}
+button:disabled{opacity:.45;cursor:default}
+#modal{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 0;background:radial-gradient(circle,#263336fb,#070a0bfe);display:grid;place-items:center;z-index:10}
+#panel{width:min(920px,95vw);margin:auto;background:#101b1f;border:2px solid #b39661;border-radius:12px;padding:28px;text-align:center;box-shadow:0 18px 80px #000}
+h1{font-family:Georgia,serif;color:#f1cf87;font-size:clamp(30px,5vw,56px);margin:2px 0}
+h2{margin:10px 0;color:#dfcca2;font-size:18px}
+.subtitle{color:#c1c5bd;margin:12px 0 22px}
+.clans{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.clan{min-height:160px;padding:16px 9px;font-size:20px;touch-action:manipulation;-webkit-tap-highlight-color:#fff5;position:relative;z-index:1}
+.clan small{display:block;margin-top:11px;font-size:12px;color:#ddd2b3;font-weight:400}
+.badge{display:block;font-size:36px;margin-bottom:8px}
+#toast{position:fixed;top:100px;left:50%;transform:translateX(-50%);background:#212d31;border:1px solid #ad9d71;padding:8px 16px;border-radius:8px;pointer-events:none;opacity:0;transition:opacity .2s;z-index:4}
+#buildInfo{position:fixed;right:12px;top:62px;background:#0b1114d6;border:1px solid #877448;border-radius:8px;padding:8px 10px;color:#ecdca8;display:none;z-index:3}
+@media(max-width:760px){#panel{padding:12px}#panel h1{font-size:27px}.clans{grid-template-columns:repeat(2,1fr)}.clan{min-height:92px;padding:8px;font-size:17px}.clan small{font-size:10px;margin-top:3px}.clan .badge{font-size:24px;margin-bottom:3px}.subtitle{margin:8px 0 10px;font-size:12px}#bottom{min-height:145px;flex-wrap:wrap}#portrait{width:150px}#actions{width:100%;max-width:none}button{padding:7px 9px}}
+
+#comicOverlay{position:fixed;inset:0;z-index:30;background:#080d12d9;display:none;align-items:center;justify-content:center}
+#comicCard{width:min(820px,95vw);background:#f2dda1;border:6px solid #13191c;box-shadow:0 0 0 5px #e9c678,0 25px 70px #000;padding:14px;transform:rotate(-1deg);color:#161a1b}
+#comicHeader{background:#172026;color:#f4dc9d;padding:9px 13px;display:flex;justify-content:space-between;font-weight:900;letter-spacing:2px}
+#comicBody{display:grid;grid-template-columns:210px 1fr;gap:12px;margin-top:12px}
+#comicPortrait{background:radial-gradient(circle at 30% 30%,#ffefb9,#73818d);border:4px solid #111;min-height:235px;display:flex;align-items:center;justify-content:center;position:relative}
+#comicFace{font-size:93px;text-shadow:4px 5px #19202688}
+#comicNameTag{position:absolute;left:6px;right:6px;bottom:6px;background:#15191d;color:#f8da9b;padding:8px;text-align:center;font-weight:900}
+#comicPanels{display:flex;flex-direction:column;gap:9px}
+.comicPanel{background:#fff9e8;border:4px solid #181818;padding:10px 12px;box-shadow:inset 0 0 0 2px #f5ddb0}
+#comicAlert{font-weight:1000;font-size:30px;color:#8d1b16;letter-spacing:1px}
+#comicSpeech{font:bold 26px Georgia,serif;min-height:80px}
+#comicStory{font-size:16px}
+#comicFooter{display:flex;align-items:center;justify-content:space-between}
+#comicSfx{font-size:26px;font-weight:1000;transform:rotate(-5deg)}
+#comicSkip{background:#171d20;border:2px solid #111;color:#ffe6af}
+@media(max-width:650px){#comicBody{grid-template-columns:1fr}#comicPortrait{min-height:110px}#comicFace{font-size:60px}#comicSpeech{font-size:20px}#comicAlert{font-size:23px}}
+#touchControls{display:none;position:fixed;top:204px;right:8px;z-index:6;flex-direction:column;gap:7px;max-width:155px}#touchControls button{font-size:12px;padding:9px 6px}#touchControls button.active{background:#617c66;border-color:#d8dc86}
+@media(pointer:coarse){#touchControls{display:flex}#tip{font-size:11px;max-width:57vw;padding:5px 7px}#top{gap:8px;padding:0 5px;flex-wrap:wrap;height:auto;min-height:52px}#top b{font-size:13px}#top span{font-size:11px}#bottom{max-height:37vh;overflow-y:auto;padding:6px;gap:5px}#details{font-size:11px}#portrait{font-size:11px;width:100px}#actions{gap:3px}#actions button{padding:6px;font-size:11px}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="top"><b>⚔ LORD OF LILLESTRØM</b><span id="faction">Clan auswählen</span><span id="resource"></span><span id="count"></span><span id="buildStatus"></span><span id="pace" style="pointer-events:auto;display:flex;gap:6px"><button id="pauseBtn" style="padding:5px 9px">⏸ Pause</button><button id="speedBtn" style="padding:5px 9px">▶ 1×</button></span></div>
+<div id="tip">Linksklick: auswählen · Rechtsklick: bewegen / sammeln / angreifen · Ziehen: mehrere Einheiten · Mausrad: zoomen · WASD/Pfeiltasten: Kamera · Ingenieur oder HQ wählen zum Bauen · H = HQ · Strg+1–5 speichern · 1–5 wählen · X = Stopp · Leertaste = Pause.</div>
+<div id="buildInfo"></div><div id="touchControls"><button id="touchSelect">👆 Auswählen</button><button id="touchMove">🎯 Bewegen / Sammeln</button><button id="touchHQ">🏠 HQ</button><button id="touchComic">🎬 Comic-Test</button></div>
+<div id="bottom"><div id="portrait">KEINE EINHEIT</div><div id="details">Wähle deinen Clan, um die Aufbauphase zu beginnen.</div><div id="actions"></div></div>
+<div id="toast"></div>
+<div id="modal"><div id="panel"><h1>LORD OF LILLESTRØM</h1><h2>1. CLAN ANTIPPEN → SPIEL STARTET</h2><p style="color:#ffe1a0;font-weight:800">Tippe direkt auf VANN, AVLØP, VEI oder PARK.</p><div class="subtitle">Erkunde eine große, an Lillestrøm angelehnte Spielwelt. Baue deine Festung, gewinne Rohstoffe, erforsche Verbesserungen und bilde Truppen aus. Die anderen Clans bauen ebenfalls vier Minuten lang auf, bevor sie Angriffe starten.</div><div class="clans" id="clans">
+<button class="clan" type="button" data-team="0" style="border-color:#5fa3c7"><span class="badge">💧</span>VANN<small>▶ SPIELEN · General Strøm</small></button>
+<button class="clan" type="button" data-team="1" style="border-color:#96a666"><span class="badge">☣</span>AVLØP<small>▶ SPIELEN · Kloakkongen</small></button>
+<button class="clan" type="button" data-team="2" style="border-color:#e5a146"><span class="badge">⚒</span>VEI<small>▶ SPIELEN · Horn-Ole</small></button>
+<button class="clan" type="button" data-team="3" style="border-color:#de9ac9"><span class="badge">✿</span>PARK<small>▶ SPIELEN · Lady Rosa</small></button>
+</div><p id="scriptWarning" style="font-size:12px;color:#eab66f">Falls die Knöpfe nicht reagieren: Die Datei läuft in einer Vorschau ohne JavaScript. Das Spiel benötigt Safari auf einer Webseite.</p><p style="color:#aab4b1;font-size:12px">Version 9 – feste Clan-Knöpfe · stilisierte Spielkarte, keine maßstabsgetreue Karte</p></div></div>
+<div id="toast"></div>
+
+<div id="comicOverlay"><div id="comicCard">
+<div id="comicHeader"><span id="comicTopline">KAMPFALARM</span><span id="comicCountdown">3.5s</span></div>
+<div id="comicBody"><div id="comicPortrait"><span id="comicFace">⚔️</span><div id="comicNameTag">GENERAL</div></div>
+<div id="comicPanels"><div class="comicPanel" id="comicAlert">FEINDANGRIFF!</div><div class="comicPanel" id="comicSpeech">„Zum Angriff!“</div><div class="comicPanel" id="comicStory">Feindliche Truppen nähern sich.</div><div class="comicPanel" id="comicFooter"><span id="comicSfx">KRAK-BOOM!</span><button id="comicSkip">ÜBERSPRINGEN</button></div></div></div>
+</div></div>
+<script>
+(()=>{'use strict';
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const factionEl=document.getElementById('faction'),resourceEl=document.getElementById('resource'),countEl=document.getElementById('count');
+const portraitEl=document.getElementById('portrait'),detailsEl=document.getElementById('details'),actionsEl=document.getElementById('actions');
+const buildStatusEl=document.getElementById('buildStatus'),buildInfoEl=document.getElementById('buildInfo'),toastEl=document.getElementById('toast');
+const comicOverlay=document.getElementById('comicOverlay'),comicSkip=document.getElementById('comicSkip');
+const TAU=Math.PI*2,W=4200,H=3200,TILE=40,COLS=Math.ceil(W/TILE),ROWS=Math.ceil(H/TILE);
+const clans=[
+ {id:'vann',name:'VANN',color:'#5fa3c7',icon:'💧',head:'General Strøm',text:'Schwere, stämmige Wassertruppen und eiserne Disziplin'},
+ {id:'avlop',name:'AVLØP',color:'#96a666',icon:'☣',head:'Kloakkongen',text:'Morlockartige Tunnelkämpfer aus der Tiefe'},
+ {id:'vei',name:'VEI',color:'#e5a146',icon:'⚒',head:'Horn-Ole',text:'Grobschlächtige Straßenkolonnen mit brutalen Fahrzeugen'},
+ {id:'park',name:'PARK',color:'#de9ac9',icon:'✿',head:'Lady Rosa',text:'Sehr feminine, schnelle und verführerische Gartenkrieger'}
+];
+let clan=null,units=[],buildings=[],nodes=[],effects=[],selected=[],keys={},uid=0,paused=false,gameSpeed=1,groups={},wallAnchor=null;
+let cam={x:0,y:0,z:1},drag=null,frame=0,lastTick=0,gameTime=0,win=0;
+let explored=new Uint8Array(COLS*ROWS),visible=new Uint8Array(COLS*ROWS),credits=240,power=0;
+let buildingMode=null,granFound=false,aiRaidAt=0,tech={weapons:0,armor:0,logistics:0},mission=0;let mobileCommandMode=false;
+let comicScene=null,lastAttackScene=-1e9,lastDefenseScene=-1e9;
+const PEACE_TIME=240000; // 4 minutes: all clans establish their settlements first
+const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const startBases=[{x:640,y:2430},{x:3520,y:680},{x:3380,y:2520},{x:760,y:720}];
+const sites=[{name:'Lillestrøm',x:2060,y:1560},{name:'Strømmen',x:1500,y:1240},{name:'Skedsmokorset',x:1480,y:620},{name:'Fetsund',x:3070,y:2330},{name:'Sørumsand',x:3450,y:980},{name:'Kjeller',x:2090,y:990}];
+const buildingData={hq:{name:'Hauptquartier',cost:0,r:68,hp:900},barracks:{name:'Kaserne',cost:150,r:46,hp:520},tower:{name:'Turm',cost:95,r:28,hp:240},wall:{name:'Zaun',cost:25,r:18,hp:130},gran:{name:'GRAN',cost:0,r:76,hp:99999},supply:{name:'Vorräte',cost:0,r:26,hp:1}};
+const unitData={engineer:{hp:85,speed:66,range:0,damage:0,r:8,cost:60},soldier:{hp:100,speed:58,range:110,damage:15,r:8,cost:55},scout:{hp:65,speed:94,range:215,damage:11,r:8,cost:70},heavy:{hp:165,speed:40,range:100,damage:20,r:10,cost:120},tank:{hp:320,speed:44,range:145,damage:30,r:15,cost:190},boss:{hp:320,speed:54,range:180,damage:23,r:12,cost:0}};
+const rng=(x,y)=>{let n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n)};
+function riverY(x){return 1520+145*Math.sin(x/510)+85*Math.sin(x/180)}
+function terrain(x,y){let r=Math.abs(y-riverY(x));if(r<82)return 'water';if(r<116)return 'shore';let k=rng(Math.floor(x/95),Math.floor(y/95));if(k>.8)return 'woods';if(k<.11)return 'gravel';return 'grass'}
+function v(x,y){return {x:(x-cam.x)*cam.z,y:(y-cam.y)*cam.z}}
+function w(x,y){return {x:x/cam.z+cam.x,y:y/cam.z+cam.y}}
+function tileIndex(x,y){let tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);return ty*COLS+tx}
+function known(x,y){let tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);return tx>=0&&ty>=0&&tx<COLS&&ty<ROWS&&explored[ty*COLS+tx]}
+function sees(x,y){let tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);return tx>=0&&ty>=0&&tx<COLS&&ty<ROWS&&visible[ty*COLS+tx]}
+function notice(t){toastEl.textContent=t;toastEl.style.opacity=1;clearTimeout(toastEl._t);toastEl._t=setTimeout(()=>toastEl.style.opacity=0,2300)}
+
+function hideComic(){comicScene=null;comicOverlay.style.display='none'}
+function showComic(team,mode){
+ if(clan===null || comicScene)return;
+ const names=['General Strøm','Kloakkongen','Horn-Ole','Lady Rosa'];
+ const faces=['🪖','🧟','🦏','🌹'];
+ const lines=mode==='enemy'?
+ ['Die Wasserlegion rückt vor!','Wir kommen aus der Tiefe!','Weg da! Wir walzen alles platt!','Schätzchen, wir übernehmen jetzt!']:
+ ['Vorrücken! Lillestrøm gehört uns!','Aus den Schächten! Zum Angriff!','Vorwärts, ihr Asphalthelden!','Ein Kuss zum Abschied, meine Lieben!'];
+ document.getElementById('comicTopline').textContent=mode==='enemy'?'KAMPFALARM':'ANGRIFFSBEFEHL';
+ document.getElementById('comicAlert').textContent=mode==='enemy'?'FEINDANGRIFF!':'ANGRIFF BEGINNT!';
+ document.getElementById('comicFace').textContent=faces[team];
+ document.getElementById('comicNameTag').textContent=names[team].toUpperCase();
+ document.getElementById('comicSpeech').textContent='„'+lines[team]+'“';
+ document.getElementById('comicStory').textContent=mode==='enemy'?'Clan '+clans[team].name+' schickt seine Truppen gegen deine Festung.':'Deine Truppen greifen Clan '+clans[team].name+' an.';
+ document.getElementById('comicSfx').textContent=mode==='enemy'?'ALARM!':'KRAK-BOOM!';
+ document.getElementById('comicPortrait').style.background='radial-gradient(circle at 30% 30%,#ffedbc,'+clans[team].color+')';
+ comicScene={remaining:3500};comicOverlay.style.display='flex';
+}
+comicSkip.addEventListener('click',hideComic);
+
+function createUnit(team,x,y,type){let c=unitData[type];let u={id:++uid,team,x,y,type,hp:c.hp,max:c.hp,speed:c.speed,range:c.range,damage:c.damage,r:c.r,target:null,enemy:null,job:null,gather:null,buildBonus:0,shot:0};if(team===clan&&clan!==null){u.damage+=tech.weapons*3;u.max+=tech.armor*18;u.hp+=tech.armor*18;u.speed+=tech.logistics*4}units.push(u);return u}
+function createBuilding(team,x,y,type){let d=buildingData[type];let b={id:++uid,team,x,y,type,hp:d.hp,max:d.hp,r:d.r,progress:type==='gran'||type==='supply'||type==='hq'?1:1};buildings.push(b);return b}
+function createNode(type,x,y,amount=260){nodes.push({id:++uid,type,x,y,amount,max:amount,r:type==='cache'?26:30})}
+function init(i){clan=i;units=[];buildings=[];nodes=[];effects=[];selected=[];uid=0;credits=240;power=0;win=0;granFound=false;buildingMode=null;explored.fill(0);visible.fill(0);gameTime=0;hideComic();mobileCommandMode=false;lastAttackScene=-1e9;lastDefenseScene=-1e9;paused=false;gameSpeed=1;groups={};wallAnchor=null;tech={weapons:0,armor:0,logistics:0};mission=0;aiRaidAt=PEACE_TIME+18000;document.getElementById('modal').style.display='none';
+ startBases.forEach((b,idx)=>{createBuilding(idx,b.x,b.y,'hq');createUnit(idx,b.x-60,b.y+100,'engineer');createUnit(idx,b.x+40,b.y+100,'engineer');createUnit(idx,b.x-10,b.y+50,'scout');createUnit(idx,b.x-70,b.y+145,'soldier');createUnit(idx,b.x+65,b.y+145,'soldier');createUnit(idx,b.x+5,b.y-35,'boss')});
+ createBuilding(-1,2090,1610,'gran');
+ for(let i=0;i<26;i++){let x=rand(220,W-220),y=rand(220,H-220);if(terrain(x,y)!=='water')createNode(i%4===0?'cache':'scrap',x,y,180+Math.floor(rand(0,160)))}
+ // Fair opening: every clan has multiple discoverable resource deposits in its surrounding wilderness.
+ startBases.forEach(b=>{[[320,30],[-330,-45],[40,345],[-220,270]].forEach(([dx,dy],j)=>{let x=clamp(b.x+dx,100,W-100),y=clamp(b.y+dy,100,H-100);createNode(j===0?'cache':'scrap',x,y,330)})});
+ // extra open areas around each base
+ cam.x=startBases[clan].x-innerWidth/2;cam.y=startBases[clan].y-innerHeight/2;cam.z=1;
+ selected=[units.find(u=>u.team===clan&&u.type==='scout')];
+ updateSight();ui();notice('Erkunde die Umgebung, finde Vorräte und baue deine Festung aus!');}
+ document.querySelectorAll('#clans [data-team]').forEach(b=>{b.addEventListener('click',()=>init(Number(b.dataset.team)))});document.getElementById('scriptWarning').textContent='Clan auswählen und auf SPIELEN tippen.';
+ function updateSight(){visible.fill(0);let sources=[...units.filter(u=>u.team===clan),...buildings.filter(b=>b.team===clan)];for(let s of sources){let r=s.type==='scout'?365:s.type==='tower'?255:s.type==='hq'?300:s.type==='boss'?240:200;let x0=Math.max(0,Math.floor((s.x-r)/TILE)),x1=Math.min(COLS-1,Math.floor((s.x+r)/TILE)),y0=Math.max(0,Math.floor((s.y-r)/TILE)),y1=Math.min(ROWS-1,Math.floor((s.y+r)/TILE));for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let cx=x*TILE+20,cy=y*TILE+20;if((cx-s.x)*(cx-s.x)+(cy-s.y)*(cy-s.y)<r*r){visible[y*COLS+x]=1;explored[y*COLS+x]=1}}}
+ let g=buildings.find(b=>b.type==='gran'); if(g&&known(g.x,g.y)&&!granFound){granFound=true;notice('GRAN entdeckt – neutrale Werkstatt gefunden!')}}
+ function drawTerrain(){let x0=Math.max(0,Math.floor(cam.x/TILE)-1),x1=Math.min(COLS,Math.ceil((cam.x+innerWidth/cam.z)/TILE)+1),y0=Math.max(0,Math.floor(cam.y/TILE)-1),y1=Math.min(ROWS,Math.ceil((cam.y+innerHeight/cam.z)/TILE)+1);for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){let wx=x*TILE,wy=y*TILE,index=y*COLS+x;if(!explored[index]){ctx.fillStyle='#050809';ctx.fillRect(wx,wy,TILE+1,TILE+1);continue}let t=terrain(wx+20,wy+20),n=rng(x,y);ctx.fillStyle=t==='water'?(n>.5?'#214551':'#24404b'):t==='shore'?'#7d7a63':t==='woods'?'#334534':t==='gravel'?'#66695a':n>.5?'#52634a':'#4d5c46';ctx.fillRect(wx,wy,TILE+1,TILE+1);if(t==='woods'){ctx.fillStyle='#263b2a';for(let j=0;j<2;j++){ctx.beginPath();ctx.arc(wx+10+j*18,wy+10+(j?16:3),10+n*4,0,TAU);ctx.fill();}}else if(t==='grass'){ctx.fillStyle='#82906b55';ctx.fillRect(wx+6+n*12,wy+12,2,10)}if(!visible[index]){ctx.fillStyle='#071014bc';ctx.fillRect(wx,wy,TILE+1,TILE+1)}}
+ // roads
+ ctx.lineCap='round'; function road(points){ctx.strokeStyle='#7f7358';ctx.lineWidth=18;ctx.beginPath();points.forEach(([px,py],i)=>i?ctx.lineTo(px,py):ctx.moveTo(px,py));ctx.stroke();ctx.strokeStyle='#94896d';ctx.lineWidth=10;ctx.stroke();}
+ road([[740,720],[1450,620],[2060,980],[3500,980]]); road([[640,2430],[1420,2150],[2080,1560],[3060,2340]]); road([[760,720],[1490,1250],[2090,1610],[3380,2520]]); sites.forEach(s=>{if(!known(s.x,s.y))return;ctx.fillStyle='#d2bf88';ctx.fillRect(s.x-6,s.y-6,12,12);ctx.font='bold 15px system-ui';ctx.fillText(s.name,s.x+10,s.y-10)});
+ // Apply unexplored/remembered shroud ABOVE roads and location names as well.
+ for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){let i=y*COLS+x;if(!explored[i]){ctx.fillStyle='#050809';ctx.fillRect(x*TILE,y*TILE,TILE+1,TILE+1)}else if(!visible[i]){ctx.fillStyle='#071014ba';ctx.fillRect(x*TILE,y*TILE,TILE+1,TILE+1)}} }
+ function drawNode(n){if(!known(n.x,n.y))return;ctx.save();ctx.translate(n.x,n.y);ctx.fillStyle='#09101199';ctx.beginPath();ctx.ellipse(10,17,n.r+10,n.r*.75,0,0,TAU);ctx.fill(); if(n.type==='scrap'){ctx.fillStyle='#8b8c87';ctx.fillRect(-18,-14,34,28);ctx.fillStyle='#c9b978';ctx.fillRect(-5,-22,18,12);ctx.fillStyle='#424240';ctx.fillRect(-20,3,40,8);}else{ctx.fillStyle='#85755d';ctx.fillRect(-16,-16,32,32);ctx.fillStyle='#e4d07c';ctx.fillRect(-10,-10,20,11);ctx.fillStyle='#3f3f33';ctx.fillRect(-6,4,12,12);}ctx.fillStyle='#f0e2af';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText(n.amount,0,-26);ctx.restore()}
+ function drawBuilding(b){if((b.type==='gran'||b.team<0)&&!known(b.x,b.y))return; if(b.team>=0&&b.team!==clan&&!sees(b.x,b.y))return; ctx.save();ctx.translate(b.x,b.y);let color=b.team>=0?clans[b.team].color:b.type==='gran'?'#d6b26c':'#94b7a2';ctx.fillStyle='#080b0ca1';ctx.beginPath();ctx.ellipse(12,20,b.r+14,b.r*.7,0,0,TAU);ctx.fill();
+ if(b.type==='hq'){ctx.fillStyle='#303739';ctx.fillRect(-68,-40,136,84);ctx.fillStyle=color;ctx.fillRect(-50,-56,100,24);ctx.fillStyle='#181d22';ctx.fillRect(-18,-12,36,44);ctx.fillStyle='#d7d4b0';ctx.fillRect(42,-68,14,28)}
+ else if(b.type==='barracks'){ctx.fillStyle='#414949';ctx.fillRect(-44,-26,88,52);ctx.fillStyle=color;ctx.fillRect(-30,-40,60,16);ctx.fillStyle='#161a1c';ctx.fillRect(-12,-8,24,34)}
+ else if(b.type==='tower'){ctx.fillStyle='#3a3f41';ctx.fillRect(-12,-26,24,56);ctx.fillStyle=color;ctx.fillRect(-19,-34,38,10);ctx.fillStyle='#d7c17c';ctx.fillRect(-2,-44,4,12)}
+ else if(b.type==='wall'){ctx.fillStyle=color;ctx.fillRect(-18,-7,36,14);ctx.fillStyle='#5f5f54';ctx.fillRect(-16,-2,32,4)}
+ else if(b.type==='gran'){ctx.fillStyle='#34393b';ctx.fillRect(-62,-34,124,68);ctx.fillStyle='#181c1f';ctx.fillRect(-54,-44,108,16);ctx.fillStyle='#f4cd7c';ctx.font='bold 19px system-ui';ctx.textAlign='center';ctx.fillText('⚒ GRAN',0,-49);ctx.fillStyle='#7b6a4b';ctx.fillRect(-30,-8,60,30)}
+ if(selected.includes(b)){ctx.strokeStyle='#f4da7f';ctx.lineWidth=3;ctx.strokeRect(-b.r-8,-b.r-8,b.r*2+16,b.r*2+16)}
+ if(b.type!=='gran'&&b.hp<99999){ctx.fillStyle='#1d1c1c';ctx.fillRect(-20,b.r+10,40,4);ctx.fillStyle=b.team===clan?'#92d076':'#c75853';ctx.fillRect(-20,b.r+10,40*b.hp/b.max,4)}
+ ctx.restore()}
+ function drawUnit(u){if(u.team!==clan&&!sees(u.x,u.y))return;ctx.save();ctx.translate(u.x,u.y);let c=clans[u.team].color;ctx.fillStyle='#081012a0';ctx.beginPath();ctx.ellipse(6,9,u.r+7,u.r*.85,0,0,TAU);ctx.fill();if(u.type==='tank'){ctx.fillStyle='#22282a';ctx.fillRect(-18,-11,36,24);ctx.fillStyle=c;ctx.fillRect(-13,-10,26,18);ctx.fillStyle='#d0ccaa';ctx.fillRect(-2,-23,6,23);ctx.fillStyle='#1b2328';ctx.fillRect(-18,-14,7,30);ctx.fillRect(11,-14,7,30)} else {ctx.fillStyle=u.type==='engineer'?'#665e3f':u.type==='scout'?'#253028':'#282b2d';ctx.fillRect(-6,2,5,11);ctx.fillRect(2,2,5,11);ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(0,-1,u.r*.85,u.r*.84,0,0,TAU);ctx.fill();ctx.fillStyle=u.type==='boss'?'#d2b56e':u.type==='engineer'?'#efd787':u.type==='scout'?'#e5e2cd':'#8b9495';ctx.beginPath();ctx.arc(0,-u.r*.85,u.type==='boss'?7:5,0,TAU);ctx.fill(); if(u.type==='boss'){if(u.team===2){ctx.fillStyle='#dbc479';ctx.beginPath();ctx.moveTo(0,-27);ctx.lineTo(-6,-17);ctx.lineTo(5,-17);ctx.fill()} else if(u.team===0){ctx.fillStyle='#161616';ctx.fillRect(-4,-23,8,2)}} if(u.type==='engineer'){ctx.strokeStyle='#d7c47b';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(6,-2);ctx.lineTo(14,-10);ctx.stroke()} else {ctx.strokeStyle='#232323';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(5,-3);ctx.lineTo(14,-9);ctx.stroke()}}
+ if(selected.includes(u)){ctx.strokeStyle='#f4df83';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,2,u.r+9,u.r+7,0,0,TAU);ctx.stroke()}ctx.fillStyle='#1c1c1c';ctx.fillRect(-15,-u.r-25,30,4);ctx.fillStyle=u.team===clan?'#94d077':'#c75853';ctx.fillRect(-15,-u.r-25,30*u.hp/u.max,4);ctx.restore()}
+ function drawEffects(dt){for(let e of effects){ctx.globalAlpha=Math.max(0,e.life/e.total);ctx.strokeStyle=e.color;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();ctx.globalAlpha=1;e.life-=dt}effects=effects.filter(e=>e.life>0)}
+ function pick(wx,wy){let opts=[...units.filter(u=>u.hp>0&&(u.team===clan||sees(u.x,u.y))),...buildings.filter(b=>b.team===clan||(b.team>=0&&sees(b.x,b.y))||(b.type==='gran'&&known(b.x,b.y))),...nodes.filter(n=>known(n.x,n.y)&&n.amount>0)];for(let o of opts.reverse()){let r=o.r||10;if(Math.hypot(o.x-wx,o.y-wy)<r+10)return o}return null}
+ function isOpenForBuilding(x,y,r){if(x<80||y<80||x>W-80||y>H-80)return false; if(terrain(x,y)==='water')return false; if(!sees(x,y))return false; let base=buildings.find(b=>b.team===clan&&b.type==='hq'); if(base && Math.hypot(x-base.x,y-base.y)>560 && ['barracks','tower','wall'].includes(buildingMode||''))return false; for(let b of buildings){if(Math.hypot(x-b.x,y-b.y)<r+b.r+8)return false} for(let n of nodes){if(n.amount>0&&Math.hypot(x-n.x,y-n.y)<r+n.r+10)return false} return true}
+ function orderMoveOrAction(wx,wy,target){if(target&&target.team>=0&&target.team!==clan&&selected.filter(u=>u.team===clan&&u.speed&&u.type!=='engineer').length>=3&&gameTime-lastAttackScene>45000){lastAttackScene=gameTime;showComic(clan,'player')} selected.filter(o=>o.speed).forEach((u,i,arr)=>{if(target&&target.type==='scrap'||target&&target.type==='cache'){if(u.type==='engineer'){u.gather=target;u.target={x:target.x+rand(-16,16),y:target.y+rand(-16,16)};u.enemy=null;return}} if(target&&target.type==='gran'&&Math.hypot(u.x-target.x,u.y-target.y)>120){u.target={x:target.x+rand(-45,45),y:target.y+rand(70,110)};u.enemy=null;return} let a=(i/Math.max(1,arr.length))*TAU;u.target={x:wx+Math.cos(a)*Math.sqrt(i)*23,y:wy+Math.sin(a)*Math.sqrt(i)*23};u.enemy=(target&&target.team!==undefined&&target.team>=0&&target.team!==clan)?target:null; if(!u.enemy)u.gather=null;})}
+ function nearGran(){let g=buildings.find(b=>b.type==='gran');return g&&selected.some(u=>u.team===clan&&u.speed&&Math.hypot(u.x-g.x,u.y-g.y)<180)}
+ function startBuild(type){buildingMode=type;buildStatusEl.textContent='Bauen: '+buildingData[type].name;buildInfoEl.style.display='block';buildInfoEl.textContent='Bauplatz wählen für '+buildingData[type].name+'. Linksklick platziert, ESC bricht ab.';notice('Bauplatz wählen: '+buildingData[type].name)}
+ function placeBuilding(wx,wy){if(!buildingMode)return false; let d=buildingData[buildingMode]; let builder=selected.find(o=>o.type==='engineer'&&o.team===clan)||units.find(u=>u.team===clan&&u.type==='engineer'); if(!builder){notice('Du brauchst einen Ingenieur!'); buildingMode=null; return false} if(!isOpenForBuilding(wx,wy,d.r)){notice('Hier ist kein Platz oder das Gebiet ist noch nicht gesichert.'); return false} if(credits<d.cost){notice('Zu wenig Vorräte.'); buildingMode=null; return false}
+ credits-=d.cost; let b=createBuilding(clan,wx,wy,buildingMode); builder.target={x:wx,y:wy}; builder.job={build:b}; buildingMode=null;buildStatusEl.textContent='';buildInfoEl.style.display='none'; notice(buildingData[b.type].name+' errichtet!'); ui(); return true}
+ function ui(){if(clan===null)return; factionEl.textContent='CLAN '+clans[clan].name+' · '+clans[clan].head; resourceEl.textContent='⚙ Vorräte: '+Math.floor(credits); countEl.textContent='Truppen: '+units.filter(u=>u.team===clan).length+' · Gebäude: '+buildings.filter(b=>b.team===clan).length+' · '+(gameTime<PEACE_TIME?'FRIEDEN '+Math.ceil((PEACE_TIME-gameTime)/1000)+'s':'KRIEG'); actionsEl.innerHTML=''; let s=selected[0];
+ portraitEl.textContent=s?(s.type==='hq'?'HAUPTQUARTIER':s.type==='gran'?'GRAN – WERKSTATT':s.type==='barracks'?'KASERNE':s.type==='tower'?'TURM':s.type==='wall'?'ZAUN':({engineer:'INGENIEUR',soldier:'SOLDAT',scout:'KUNDSCHAFTER',heavy:'ELITE',tank:'KAMPFWAGEN',boss:clans[clan].head.toUpperCase(),scrap:'SCHROTTLAGER',cache:'VORRATSKISTE'}[s.type]||s.type.toUpperCase())):'KEINE AUSWAHL';
+ detailsEl.textContent=s?`${selected.length} ausgewählt · ${s.max?Math.ceil(s.hp)+' / '+s.max+' HP':''} · Erst erkunden, dann sammeln und Festung aufbauen.`:'Wähle Einheiten, Vorräte oder Gebäude aus.';
+ const add=(name,cost,cb,enabled=true)=>{let b=document.createElement('button'); b.textContent=name+(cost?' ('+cost+' ⚙)':''); b.disabled=!enabled||credits<cost; b.onclick=()=>{if(cost&&credits<cost)return; if(cost)credits-=cost; cb(); ui()}; actionsEl.appendChild(b)};
+ if(selected.some(o=>o.type==='hq'&&o.team===clan)){
+   let base=selected.find(o=>o.type==='hq');
+   add('Ingenieur',unitData.engineer.cost,()=>createUnit(clan,base.x+rand(-70,70),base.y+115,'engineer'));
+   add('Soldat',unitData.soldier.cost,()=>createUnit(clan,base.x+rand(-70,70),base.y+115,'soldier'));
+   add('Kundschafter',unitData.scout.cost,()=>createUnit(clan,base.x+rand(-70,70),base.y+115,'scout'));
+   add('Kaserne bauen',buildingData.barracks.cost,()=>{credits+=buildingData.barracks.cost; startBuild('barracks')});
+   add('Turm bauen',buildingData.tower.cost,()=>{credits+=buildingData.tower.cost; startBuild('tower')});
+   add('Zaun bauen',buildingData.wall.cost,()=>{credits+=buildingData.wall.cost; startBuild('wall')});
+   const up=(kind,label,cost,max)=>add(label+' '+(tech[kind]+1)+'/'+max,cost,()=>{tech[kind]++;for(let u of units.filter(u=>u.team===clan)){if(kind==='weapons')u.damage+=3;if(kind==='armor'){u.max+=18;u.hp+=18}if(kind==='logistics')u.speed+=4}notice('Forschung abgeschlossen: '+label)},tech[kind]<max);
+   up('weapons','Waffenforschung',110+tech.weapons*80,3);
+   up('armor','Rüstungsforschung',110+tech.armor*80,3);
+   up('logistics','Logistik',90+tech.logistics*70,3);
+ }
+ if(selected.some(o=>o.type==='engineer'&&o.team===clan)){
+   add('Kaserne bauen',buildingData.barracks.cost,()=>{credits+=buildingData.barracks.cost; startBuild('barracks')});
+   add('Turm bauen',buildingData.tower.cost,()=>{credits+=buildingData.tower.cost; startBuild('tower')});
+   add('Zaun bauen',buildingData.wall.cost,()=>{credits+=buildingData.wall.cost; startBuild('wall')});
+ }
+ if(selected.some(o=>o.type==='barracks'&&o.team===clan)){
+   let barr=selected.find(o=>o.type==='barracks');
+   add('Soldat',unitData.soldier.cost,()=>createUnit(clan,barr.x+rand(-55,55),barr.y+85,'soldier'));
+   add('Elite',unitData.heavy.cost,()=>createUnit(clan,barr.x+rand(-55,55),barr.y+85,'heavy'));
+   add('Kampfwagen',unitData.tank.cost,()=>createUnit(clan,barr.x+rand(-55,55),barr.y+85,'tank'));
+ }
+ if(nearGran()){
+   add('GRAN: Waffenupgrade',90,()=>{selected.filter(u=>u.speed).forEach(u=>u.damage+=10); notice('Waffen verbessert!')});
+   add('GRAN: Panzerung',120,()=>{selected.filter(u=>u.speed).forEach(u=>{u.max+=45;u.hp+=45}); notice('Panzerung verbessert!')});
+   add('GRAN: Motor',80,()=>{selected.filter(u=>u.speed).forEach(u=>u.speed+=8); notice('Motor/Tempo verbessert!')});
+ }
+ if(selected.some(o=>o.speed&&o.team===clan)) add('Alle Einheiten',0,()=>{selected=units.filter(u=>u.team===clan); ui()});
+ if(selected.some(o=>o.type==='scout'&&o.team===clan)){add('Spähfahrt: Zentrum',0,()=>orderMoveOrAction(2060,1560,null));add('Umgebung erkunden',0,()=>{let h=buildings.find(b=>b.team===clan&&b.type==='hq');if(h)orderMoveOrAction(clamp(h.x+460,50,W-50),clamp(h.y-220,50,H-50),null)})}
+ if(win){detailsEl.textContent=win===1?'SIEG! Dein Clan beherrscht Lillestrøm.':'NIEDERLAGE! Dein Hauptquartier fiel.'; add('Neues Spiel',0,()=>location.reload())}
+ }
+ function update(dt){if(comicScene){comicScene.remaining-=dt;document.getElementById('comicCountdown').textContent=(Math.max(0,comicScene.remaining)/1000).toFixed(1)+'s';if(comicScene.remaining<=0)hideComic();return;}if(clan===null||win||paused)return; dt*=gameSpeed; gameTime+=dt; credits+=dt*0.0015; // very slow passive income
+ for(let u of units){if(u.hp<=0)continue; // AI orders
+   // AI stays near its own settlement during the peace/building phase.
+   // Scouts make only short local reconnaissance trips rather than attacking the player.
+   if(u.team!==clan && gameTime<PEACE_TIME && !u.target && u.type==='scout' && Math.random()<dt*.000009){let hq=buildings.find(b=>b.team===u.team&&b.type==='hq');if(hq)u.target={x:clamp(hq.x+rand(-300,300),40,W-40),y:clamp(hq.y+rand(-300,300),40,H-40)}}
+   // gather logic
+   if(u.gather&&u.gather.amount>0){ let n=u.gather; let d=Math.hypot(n.x-u.x,n.y-u.y); if(d<32){ let taken=Math.min(n.amount,dt*0.08); n.amount-=taken; credits+=taken*.75; if(Math.random()<0.02)effects.push({x:u.x,y:u.y,tx:u.x+rand(-12,12),ty:u.y-20,life:120,total:120,color:'#d4c275'}) ; if(n.amount<=0){n.amount=0; u.gather=null; notice('Rohstoffquelle erschöpft.')}} }
+   // movement
+   if(u.target){ let dx=u.target.x-u.x,dy=u.target.y-u.y,d=Math.hypot(dx,dy); if(d>5){ let step=Math.min(d,u.speed*dt/1000); u.x=clamp(u.x+dx/d*step,20,W-20); u.y=clamp(u.y+dy/d*step,20,H-20);} else {u.target=null;}}
+   // building / repair
+   if(u.job&&u.job.build){ let b=u.job.build; if(b&&Math.hypot(u.x-b.x,u.y-b.y)<45){ b.hp=Math.min(b.max,b.hp+dt*0.15); if(b.hp>=b.max){u.job=null} } }
+   // attack
+   let candidates=[...units,...buildings].filter(v=>v!==u&&v.hp>0&&v.team>=0&&v.team!==u.team&&(gameTime>=PEACE_TIME||u.team===clan&&v.team!==clan)&&Math.hypot(v.x-u.x,v.y-u.y)<u.range); if(candidates.length&&u.damage>0){candidates.sort((a,b)=>Math.hypot(a.x-u.x,a.y-u.y)-Math.hypot(b.x-u.x,b.y-u.y)); let e=candidates[0]; if(gameTime-u.shot>780){e.hp-=u.damage;u.shot=gameTime;effects.push({x:u.x,y:u.y,tx:e.x,ty:e.y,life:150,total:150,color:clans[u.team].color})}}
+ }
+ // tower auto attack
+ for(let b of buildings){ if(b.type==='tower'&&b.hp>0){ let range=220; let es=[...units,...buildings].filter(v=>v.team>=0&&v.team!==b.team&&v.hp>0&&(gameTime>=PEACE_TIME||b.team===clan)&&Math.hypot(v.x-b.x,v.y-b.y)<range); if(es.length){es.sort((a,c)=>Math.hypot(a.x-b.x,a.y-b.y)-Math.hypot(c.x-b.x,c.y-b.y)); let e=es[0]; if(!b.shot||gameTime-b.shot>900){e.hp-=18;b.shot=gameTime;effects.push({x:b.x,y:b.y-20,tx:e.x,ty:e.y,life:160,total:160,color:clans[b.team].color})}} }}
+ // Every AI clan gets its own economic/fortification buildup instead of a minute-one rush.
+ // Their camps gain barracks, defensive towers, fences and soldiers over time.
+ if(Math.floor(gameTime/16000)!==Math.floor((gameTime-dt)/16000)){
+   for(let team=0;team<4;team++) if(team!==clan){
+     let hq=buildings.find(b=>b.team===team&&b.type==='hq');if(!hq)continue;
+     let own=buildings.filter(b=>b.team===team),army=units.filter(u=>u.team===team);
+     if(!own.some(b=>b.type==='barracks') && gameTime>28000) createBuilding(team,hq.x+140,hq.y-25,'barracks');
+     if(gameTime>55000 && own.filter(b=>b.type==='tower').length<Math.min(4,Math.floor(gameTime/60000))) {
+       let n=own.filter(b=>b.type==='tower').length,angle=(n+.5)*TAU/4;
+       createBuilding(team,hq.x+Math.cos(angle)*190,hq.y+Math.sin(angle)*190,'tower');
+     }
+     if(gameTime>43000 && own.filter(b=>b.type==='wall').length<12){
+       let n=own.filter(b=>b.type==='wall').length;
+       for(let j=0;j<3;j++){let a=(n+j)*TAU/16;createBuilding(team,hq.x+Math.cos(a)*250,hq.y+Math.sin(a)*250,'wall')}
+     }
+     if(army.length<30){
+       createUnit(team,hq.x+rand(-90,90),hq.y+rand(85,145),gameTime>100000&&Math.random()>.65?'heavy':'soldier');
+       if(gameTime>120000 && Math.random()>.5)createUnit(team,hq.x+rand(-90,90),hq.y+rand(85,145),'soldier');
+       if(gameTime>170000 && army.length>14 && Math.random()>.6)createUnit(team,hq.x+rand(-90,90),hq.y+rand(85,145),'tank');
+     }
+   }
+ }
+ // Battles only begin after four minutes, and only with a reasonably sized army.
+ if(gameTime>=PEACE_TIME && gameTime>=aiRaidAt){
+   aiRaidAt=gameTime+65000;
+   let hq=buildings.find(b=>b.team===clan&&b.type==='hq');
+   if(hq){for(let team=0;team<4;team++)if(team!==clan){
+     let army=units.filter(u=>u.team===team&&u.type!=='engineer'&&u.type!=='scout'&&u.type!=='boss');
+     if(army.length>=9){if(gameTime-lastDefenseScene>45000){lastDefenseScene=gameTime;showComic(team,'enemy')} army.slice(0,Math.min(8,Math.floor(army.length*.55))).forEach((u,j)=>{
+       u.target={x:hq.x+Math.cos(j*TAU/8)*105,y:hq.y+Math.sin(j*TAU/8)*105};
+     })}
+   }}
+ }
+ if(gameTime>=PEACE_TIME && gameTime-dt<PEACE_TIME)notice('Die Aufbauphase ist vorbei – die Clans rüsten zum Krieg!');
+ units=units.filter(u=>u.hp>0); buildings=buildings.filter(b=>b.hp>0); nodes=nodes.filter(n=>n.amount>0); selected=selected.filter(o=>o.hp===undefined||o.hp>0||o.amount>0);
+ let myHQ=buildings.find(b=>b.team===clan&&b.type==='hq'); if(!myHQ)win=2; else if(buildings.filter(b=>b.type==='hq'&&b.team>=0).every(b=>b.team===clan))win=1;
+ if(Math.floor(gameTime/400)!==Math.floor((gameTime-dt)/400)){updateSight(); ui()}
+ let speed=dt/cam.z*.65; if(keys['w']||keys['ArrowUp'])cam.y-=speed; if(keys['s']||keys['ArrowDown'])cam.y+=speed; if(keys['a']||keys['ArrowLeft'])cam.x-=speed; if(keys['d']||keys['ArrowRight'])cam.x+=speed; cam.x=clamp(cam.x,0,Math.max(0,W-innerWidth/cam.z)); cam.y=clamp(cam.y,0,Math.max(0,H-innerHeight/cam.z)); }
+ function draw(){if(canvas.width!==Math.round(innerWidth*devicePixelRatio)||canvas.height!==Math.round(innerHeight*devicePixelRatio)){canvas.width=Math.round(innerWidth*devicePixelRatio);canvas.height=Math.round(innerHeight*devicePixelRatio);} ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); ctx.fillStyle='#05090a';ctx.fillRect(0,0,innerWidth,innerHeight); if(clan===null)return; ctx.save(); ctx.scale(cam.z,cam.z); ctx.translate(-cam.x,-cam.y); drawTerrain(); nodes.forEach(drawNode); buildings.forEach(drawBuilding); units.forEach(drawUnit); drawEffects(16); if(buildingMode){ let p=mouseWorld; if(p){ let d=buildingData[buildingMode],ok=isOpenForBuilding(p.x,p.y,d.r); ctx.globalAlpha=.7; ctx.strokeStyle=ok?'#82d06d':'#d05f5f'; ctx.lineWidth=2/cam.z; ctx.strokeRect(p.x-d.r,p.y-d.r,d.r*2,d.r*2); ctx.globalAlpha=1; }} if(drag&&drag.held){ let a=w(drag.x,drag.y),b=w(drag.nx,drag.ny); ctx.strokeStyle='#f7e199';ctx.lineWidth=2/cam.z;ctx.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y)} ctx.restore();
+ // minimap
+ ctx.fillStyle='#0a1619ce';ctx.fillRect(innerWidth-190,60,176,132);ctx.strokeStyle='#a99969';ctx.strokeRect(innerWidth-190,60,176,132); for(let b of buildings){ if(b.type==='hq'&&known(b.x,b.y)){ ctx.fillStyle=clans[b.team].color; ctx.fillRect(innerWidth-190+b.x/W*176-3,60+b.y/H*132-3,6,6)} } for(let n of nodes){ if(known(n.x,n.y)){ ctx.fillStyle=n.type==='scrap'?'#c8c7bd':'#e6d887';ctx.fillRect(innerWidth-190+n.x/W*176-1,60+n.y/H*132-1,3,3)}} ctx.fillStyle='#f2d68f'; ctx.fillRect(innerWidth-190+(cam.x+innerWidth/cam.z/2)/W*176-2,60+(cam.y+innerHeight/cam.z/2)/H*132-2,4,4); }
+ document.getElementById('pauseBtn').onclick=()=>{if(clan===null)return;paused=!paused;document.getElementById('pauseBtn').textContent=paused?'▶ Weiter':'⏸ Pause';notice(paused?'Spiel pausiert':'Spiel läuft')};
+ document.getElementById('speedBtn').onclick=()=>{gameSpeed=gameSpeed===1?2:1;document.getElementById('speedBtn').textContent='▶ '+gameSpeed+'×';notice('Spieltempo '+gameSpeed+'×')};
+ let last=performance.now(),mouseWorld=null; function loop(now){let dt=Math.min(now-last,50); last=now; update(dt); draw(); requestAnimationFrame(loop)} requestAnimationFrame(loop);
+ canvas.addEventListener('mousedown',e=>{if(clan===null)return; if(e.button===0&&e.clientX>innerWidth-190&&e.clientX<innerWidth-14&&e.clientY>=60&&e.clientY<=192){cam.x=clamp((e.clientX-(innerWidth-190))/176*W-innerWidth/(2*cam.z),0,Math.max(0,W-innerWidth/cam.z));cam.y=clamp((e.clientY-60)/132*H-innerHeight/(2*cam.z),0,Math.max(0,H-innerHeight/cam.z));return;} if(e.button===0){if(buildingMode){let p=w(e.clientX,e.clientY); placeBuilding(p.x,p.y); return} drag={x:e.clientX,y:e.clientY,nx:e.clientX,ny:e.clientY,held:false}}});
+ canvas.addEventListener('mousemove',e=>{mouseWorld=w(e.clientX,e.clientY); if(drag){drag.nx=e.clientX;drag.ny=e.clientY;if(Math.hypot(drag.x-e.clientX,drag.y-e.clientY)>8)drag.held=true}});
+ canvas.addEventListener('mouseup',e=>{if(clan===null)return; if(e.button===0&&e.clientX>innerWidth-190&&e.clientX<innerWidth-14&&e.clientY>=60&&e.clientY<=192){drag=null;return;} let p=w(e.clientX,e.clientY); if(e.button===2){let o=pick(p.x,p.y); orderMoveOrAction(p.x,p.y,o); return} if(e.button!==0)return; if(buildingMode){placeBuilding(p.x,p.y);return} if(drag?.held){let a=w(drag.x,drag.y),b=w(drag.nx,drag.ny); selected=units.filter(u=>u.team===clan&&u.x>=Math.min(a.x,b.x)&&u.x<=Math.max(a.x,b.x)&&u.y>=Math.min(a.y,b.y)&&u.y<=Math.max(a.y,b.y)); if(!selected.length) selected=buildings.filter(o=>o.team===clan&&o.x>=Math.min(a.x,b.x)&&o.x<=Math.max(a.x,b.x)&&o.y>=Math.min(a.y,b.y)&&o.y<=Math.max(a.y,b.y)); }
+ else {let o=pick(p.x,p.y); if(o&&(o.team===clan||o.type==='gran'||o.type==='scrap'||o.type==='cache')) selected=[o]; else selected=[]} drag=null; ui()});
+ 
+const mobileSelectBtn=document.getElementById('touchSelect'),mobileMoveBtn=document.getElementById('touchMove');
+function setMobileMode(isMove){mobileCommandMode=isMove;mobileSelectBtn.classList.toggle('active',!isMove);mobileMoveBtn.classList.toggle('active',isMove)}
+mobileSelectBtn.onclick=()=>setMobileMode(false);
+mobileMoveBtn.onclick=()=>setMobileMode(true);
+document.getElementById('touchHQ').onclick=()=>{if(clan===null)return;let h=buildings.find(b=>b.type==='hq'&&b.team===clan);if(h){selected=[h];cam.x=clamp(h.x-innerWidth/(2*cam.z),0,Math.max(0,W-innerWidth/cam.z));cam.y=clamp(h.y-innerHeight/(2*cam.z),0,Math.max(0,H-innerHeight/cam.z));ui()}};
+document.getElementById('touchComic').onclick=()=>{if(clan!==null)showComic((clan+1)%4,'enemy')};
+setMobileMode(false);
+let touchStartPoint=null;
+canvas.addEventListener('touchstart',e=>{if(clan===null||e.touches.length!==1)return;e.preventDefault();const t=e.touches[0];touchStartPoint={x:t.clientX,y:t.clientY,time:Date.now(),cx:cam.x,cy:cam.y,moved:false}},{passive:false});
+canvas.addEventListener('touchmove',e=>{if(!touchStartPoint||e.touches.length!==1)return;e.preventDefault();let t=e.touches[0];let dx=t.clientX-touchStartPoint.x,dy=t.clientY-touchStartPoint.y;if(Math.hypot(dx,dy)>12)touchStartPoint.moved=true;if(touchStartPoint.moved){cam.x=clamp(touchStartPoint.cx-dx/cam.z,0,Math.max(0,W-innerWidth/cam.z));cam.y=clamp(touchStartPoint.cy-dy/cam.z,0,Math.max(0,H-innerHeight/cam.z))}},{passive:false});
+canvas.addEventListener('touchend',e=>{if(!touchStartPoint||clan===null)return;e.preventDefault();let t=e.changedTouches[0];const start=touchStartPoint;touchStartPoint=null;if(start.moved)return;let p=w(t.clientX,t.clientY);if(buildingMode){placeBuilding(p.x,p.y);return}let o=pick(p.x,p.y);if(mobileCommandMode){orderMoveOrAction(p.x,p.y,o);setMobileMode(false)}else{selected=o&&(o.team===clan||o.type==='gran'||o.type==='scrap'||o.type==='cache')?[o]:[];ui()}},{passive:false});
+canvas.addEventListener('contextmenu',e=>e.preventDefault()); canvas.addEventListener('wheel',e=>{e.preventDefault(); let p=w(e.clientX,e.clientY); cam.z=clamp(cam.z*(e.deltaY>0?.9:1.1),.58,1.75); cam.x=p.x-e.clientX/cam.z; cam.y=p.y-e.clientY/cam.z},{passive:false});
+ window.addEventListener('keydown',e=>{keys[e.key]=true;
+ if(clan!==null&&/^[1-5]$/.test(e.key)){if(e.ctrlKey||e.metaKey){groups[e.key]=selected.filter(u=>u.team===clan&&u.speed).map(u=>u.id);notice('Gruppe '+e.key+' gespeichert');e.preventDefault()}else{selected=units.filter(u=>groups[e.key]?.includes(u.id)&&u.team===clan);if(selected.length){let u=selected[0];cam.x=clamp(u.x-innerWidth/(2*cam.z),0,W-innerWidth/cam.z);cam.y=clamp(u.y-innerHeight/(2*cam.z),0,H-innerHeight/cam.z)}ui();e.preventDefault()}}
+ if(clan!==null&&e.key.toLowerCase()==='h'&&!e.ctrlKey){let h=buildings.find(b=>b.type==='hq'&&b.team===clan);if(h){selected=[h];cam.x=clamp(h.x-innerWidth/(2*cam.z),0,W-innerWidth/cam.z);cam.y=clamp(h.y-innerHeight/(2*cam.z),0,H-innerHeight/cam.z);ui()}}
+ if(clan!==null&&e.key.toLowerCase()==='x'){selected.filter(u=>u.speed).forEach(u=>{u.target=null;u.enemy=null;u.gather=null});notice('Truppen halten Position')}
+ if(clan!==null&&e.code==='Space'&&!e.repeat){e.preventDefault();document.getElementById('pauseBtn').click()}
+ if(e.key==='Escape'){buildingMode=null; buildStatusEl.textContent=''; buildInfoEl.style.display='none'; selected=[]; ui()} if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault()});
+ window.addEventListener('keyup',e=>keys[e.key]=false); window.addEventListener('blur',()=>keys={});
+})();
+</script>
+</body>
+</html>
