@@ -171,7 +171,7 @@ body.mobile #hint{display:none!important}
 <div id="quest">⚔ Die anderen drei Clans besiegen</div><div id="buildInfo"></div>
 <div id="mobileTools">
   <button id="mobileSelect" class="active">👆 Auswählen</button>
-  <button id="mobileMove">🎯 Bewegen</button>
+  <button id="mobileMove">🎯 Ziel setzen</button>
   <button id="mobileHQ">🏠 HQ</button>
   <button id="mobileAll">⚔ Alle</button>
 </div>
@@ -435,6 +435,7 @@ function drawUnit(u){
  const size=isVehicle?85:(u.type==='heavy'?65:(isBoss?65:52));
  ctx.save();ctx.translate(u.x,u.y);
  ctx.fillStyle='rgba(0,0,0,.42)';ctx.beginPath();ctx.ellipse(6,14,size*.4,size*.16,0,0,TAU);ctx.fill();
+ if(u.team===clan&&u.target&&selected.includes(u)){ctx.save();ctx.strokeStyle='rgba(250,226,142,.65)';ctx.lineWidth=2;ctx.setLineDash([7,6]);ctx.beginPath();ctx.moveTo(0,5);ctx.lineTo(u.target.x-u.x,u.target.y-u.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
  if(selected.includes(u)){
    ctx.strokeStyle='#f3dc81';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,7,size*.42,size*.22,0,0,TAU);ctx.stroke();
  }
@@ -461,9 +462,19 @@ function drawEffects(dt){for(const e of effects){const f=Math.max(0,e.life/e.tot
  ctx.restore();e.life-=dt} effects=effects.filter(e=>e.life>0)}
 
 function pick(wx,wy){const opts=[...units.filter(u=>u.hp>0 && (u.team===clan || sees(u.x,u.y))),...buildings.filter(b=>b.team===clan || (b.team>=0&&sees(b.x,b.y)) || (b.type==='gran'&&knows(b.x,b.y))),...nodes.filter(n=>n.amount>0&&knows(n.x,n.y))]; for(const o of opts.reverse()){const r=o.r||10; if(Math.hypot(o.x-wx,o.y-wy)<r+(o.speed?27:12)) return o} return null}
+function pickTouch(wx,wy){
+ // Characters are illustrated above their ground coordinates: use their visible sprite, not only their feet.
+ const candidates=units.filter(u=>u.hp>0&&(u.team===clan||sees(u.x,u.y)));
+ let best=null,bestScore=Infinity;
+ for(const u of candidates){const vehicle=u.type==='tank';const dx=(wx-u.x)/(vehicle?60:35),dy=(wy-(u.y-(vehicle?22:19)))/(vehicle?49:39);const score=dx*dx+dy*dy;
+ if(score<1.15&&score<bestScore){best=u;bestScore=score}}
+ return best||pick(wx,wy);
+}
+let lastOrderMark=null;
+function confirmOrder(wx,wy){lastOrderMark={x:wx,y:wy,time:performance.now()};}
 function canBuildHere(x,y,r){if(x<80||y<80||x>W-80||y>H-80) return false; if(terrainAt(x,y)==='water') return false; if(!sees(x,y)) return false; const hq=buildings.find(b=>b.team===clan&&b.type==='hq'); if(hq && Math.hypot(x-hq.x,y-hq.y)>620 && buildingMode!=='wall') return false; for(const b of buildings){ if(Math.hypot(x-b.x,y-b.y)<r+b.r+10) return false } for(const n of nodes){ if(n.amount>0 && Math.hypot(x-n.x,y-n.y)<r+n.r+12) return false } return true}
 
-function issueOrder(wx,wy,target){if(target && target.team>=0 && target.team!==clan && selected.filter(s=>s.team===clan&&s.damage>0&&s.type!=='engineer').length>=3 && gameTime-lastPlayerComic>30000){lastPlayerComic=gameTime; showComic({kind:'player',team:clan,title:'ANGRIFFSBEFEHL!',speech:clanDefs[clan].quote,story:'Angriff auf '+(target.team===4?'das Contourschloss':clanDefs[target.team].name)+'!' })}
+function issueOrder(wx,wy,target){const moving=selected.filter(o=>o.team===clan&&o.speed);if(!moving.length){toastMsg('Erst einen Soldaten antippen!');return;}confirmOrder(wx,wy);if(target && target.team>=0 && target.team!==clan && selected.filter(s=>s.team===clan&&s.damage>0&&s.type!=='engineer').length>=3 && gameTime-lastPlayerComic>30000){lastPlayerComic=gameTime; showComic({kind:'player',team:clan,title:'ANGRIFFSBEFEHL!',speech:clanDefs[clan].quote,story:'Angriff auf '+(target.team===4?'das Contourschloss':clanDefs[target.team].name)+'!' })}
  selected.filter(o=>o.speed).forEach((u,i,arr)=>{
    if(target && (target.type==='scrap'||target.type==='cache')){ if(u.type==='engineer'){u.gather=target; u.target={x:target.x+rand(-14,14),y:target.y+rand(-14,14)}; u.enemy=null; return;}}
    if(target && target.type==='gran'){u.target={x:target.x+rand(-42,42),y:target.y+rand(64,106)}; u.enemy=null; return;}
@@ -562,7 +573,7 @@ function update(dt){if(clan===null) return; if(comicScene){comicScene.remaining-
  const move=dt/cam.z*.72; if(keys.w||keys.ArrowUp) cam.y-=move; if(keys.s||keys.ArrowDown) cam.y+=move; if(keys.a||keys.ArrowLeft) cam.x-=move; if(keys.d||keys.ArrowRight) cam.x+=move; cam.x=clamp(cam.x,0,Math.max(0,W-innerWidth/cam.z)); cam.y=clamp(cam.y,0,Math.max(0,H-innerHeight/cam.z)); }
 
 function draw(){if(canvas.width!==Math.round(innerWidth*devicePixelRatio)||canvas.height!==Math.round(innerHeight*devicePixelRatio)){canvas.width=Math.round(innerWidth*devicePixelRatio); canvas.height=Math.round(innerHeight*devicePixelRatio)} ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); ctx.fillStyle='#060a0d'; ctx.fillRect(0,0,innerWidth,innerHeight); if(clan===null) return;
- ctx.save(); ctx.scale(cam.z,cam.z); ctx.translate(-cam.x,-cam.y); drawTerrain(); nodes.forEach(drawNode); buildings.forEach(drawBuilding); units.forEach(drawUnit); drawEffects(16); if(buildingMode && mouseWorld){const d=buildingDefs[buildingMode], ok=canBuildHere(mouseWorld.x,mouseWorld.y,d.r); ctx.globalAlpha=.75; ctx.strokeStyle=ok?'#8dde6f':'#d66161'; ctx.lineWidth=2/cam.z; ctx.strokeRect(mouseWorld.x-d.r,mouseWorld.y-d.r,d.r*2,d.r*2); ctx.globalAlpha=1} if(drag&&drag.held){const a=screenToWorld(drag.x,drag.y),b=screenToWorld(drag.nx,drag.ny); ctx.strokeStyle='#f5e194'; ctx.lineWidth=2/cam.z; ctx.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y)} ctx.restore(); if(!isTouch) drawMinimap();}
+ ctx.save(); ctx.scale(cam.z,cam.z); ctx.translate(-cam.x,-cam.y); drawTerrain(); nodes.forEach(drawNode); buildings.forEach(drawBuilding); units.forEach(drawUnit); drawEffects(16); if(lastOrderMark&&performance.now()-lastOrderMark.time<1100){const age=(performance.now()-lastOrderMark.time)/1100;ctx.save();ctx.globalAlpha=1-age;ctx.strokeStyle='#f8e38e';ctx.lineWidth=3/cam.z;ctx.beginPath();ctx.arc(lastOrderMark.x,lastOrderMark.y,15+age*22,0,TAU);ctx.stroke();ctx.beginPath();ctx.moveTo(lastOrderMark.x-13,lastOrderMark.y);ctx.lineTo(lastOrderMark.x+13,lastOrderMark.y);ctx.moveTo(lastOrderMark.x,lastOrderMark.y-13);ctx.lineTo(lastOrderMark.x,lastOrderMark.y+13);ctx.stroke();ctx.restore();} if(buildingMode && mouseWorld){const d=buildingDefs[buildingMode], ok=canBuildHere(mouseWorld.x,mouseWorld.y,d.r); ctx.globalAlpha=.75; ctx.strokeStyle=ok?'#8dde6f':'#d66161'; ctx.lineWidth=2/cam.z; ctx.strokeRect(mouseWorld.x-d.r,mouseWorld.y-d.r,d.r*2,d.r*2); ctx.globalAlpha=1} if(drag&&drag.held){const a=screenToWorld(drag.x,drag.y),b=screenToWorld(drag.nx,drag.ny); ctx.strokeStyle='#f5e194'; ctx.lineWidth=2/cam.z; ctx.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y)} ctx.restore(); if(!isTouch) drawMinimap();}
 function drawMinimap(){mctx.clearRect(0,0,170,126); mctx.fillStyle='#0a1013'; mctx.fillRect(0,0,170,126); mctx.strokeStyle='#8c7c54'; mctx.strokeRect(0,0,170,126); for(const b of buildings){if(b.type==='hq'||b.type==='castle'){mctx.fillStyle=b.team>=0?clanDefs[b.team].color:'#c8ab68'; mctx.fillRect(b.x/W*170-3,b.y/H*126-3,6,6)}} for(const n of nodes){if(knows(n.x,n.y)){mctx.fillStyle=n.type==='scrap'?'#bebdb1':'#e2d27d'; mctx.fillRect(n.x/W*170-1,n.y/H*126-1,3,3)}} mctx.fillStyle='#f5da87'; mctx.fillRect((cam.x+innerWidth/(2*cam.z))/W*170-2,(cam.y+innerHeight/(2*cam.z))/H*126-2,4,4)}
 
 canvas.addEventListener('mousedown',e=>{if(clan===null) return; if(e.button===0){ if(buildingMode){const p=screenToWorld(e.clientX,e.clientY); placeBuilding(p.x,p.y); return;} drag={x:e.clientX,y:e.clientY,nx:e.clientX,ny:e.clientY,held:false}; }});
@@ -576,7 +587,26 @@ window.addEventListener('keyup',e=>keys[e.key]=false); window.addEventListener('
 let pinch=null;
 canvas.addEventListener('touchstart',e=>{if(clan===null)return; if(e.touches.length===2){e.preventDefault();const a=e.touches[0],b=e.touches[1],cx=(a.clientX+b.clientX)/2,cy=(a.clientY+b.clientY)/2;pinch={dist:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:cam.z,world:screenToWorld(cx,cy)};touchDrag=null;return;} if(e.touches.length!==1)return; e.preventDefault(); const t=e.touches[0]; touchDrag={x:t.clientX,y:t.clientY,cx:cam.x,cy:cam.y,moved:false}; mouseWorld=screenToWorld(t.clientX,t.clientY)}, {passive:false});
 canvas.addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){e.preventDefault();const a=e.touches[0],b=e.touches[1],cx=(a.clientX+b.clientX)/2,cy=(a.clientY+b.clientY)/2,dist=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);cam.z=clamp(pinch.z*dist/Math.max(1,pinch.dist),.62,1.95);cam.x=clamp(pinch.world.x-cx/cam.z,0,Math.max(0,W-innerWidth/cam.z));cam.y=clamp(pinch.world.y-cy/cam.z,0,Math.max(0,H-innerHeight/cam.z));return;} if(!touchDrag||e.touches.length!==1)return; e.preventDefault(); const t=e.touches[0]; mouseWorld=screenToWorld(t.clientX,t.clientY); const dx=t.clientX-touchDrag.x,dy=t.clientY-touchDrag.y; if(Math.hypot(dx,dy)>12) touchDrag.moved=true; if(touchDrag.moved){cam.x=clamp(touchDrag.cx-dx/cam.z,0,Math.max(0,W-innerWidth/cam.z)); cam.y=clamp(touchDrag.cy-dy/cam.z,0,Math.max(0,H-innerHeight/cam.z));}}, {passive:false});
-canvas.addEventListener('touchend',e=>{if(pinch){e.preventDefault();if(e.touches.length<2)pinch=null;return;} if(!touchDrag||clan===null)return; e.preventDefault(); const t=e.changedTouches[0]; const start=touchDrag; touchDrag=null; if(start.moved) return; const p=screenToWorld(t.clientX,t.clientY); if(buildingMode){placeBuilding(p.x,p.y); return;} const o=pick(p.x,p.y); if(mobileMode==='move'){issueOrder(p.x,p.y,o);setMobileMode('select');openPanel(false)} else if(o&&(o.team===clan||o.type==='gran'||o.type==='scrap'||o.type==='cache')){if(o.team===clan){selected=[o];ui();openPanel(true)}else if(selected.some(u=>u.team===clan&&u.speed)){issueOrder(p.x,p.y,o);openPanel(false)}else{selected=[o];ui();openPanel(true)}} else if(selected.some(u=>u.team===clan&&u.speed)){issueOrder(p.x,p.y,null);openPanel(false)} else {selected=[];ui();openPanel(false)}}, {passive:false});
+canvas.addEventListener('touchend',e=>{
+ if(pinch){e.preventDefault();if(e.touches.length<2)pinch=null;return;}
+ if(!touchDrag||clan===null)return;
+ e.preventDefault();const t=e.changedTouches[0],start=touchDrag;touchDrag=null;
+ if(start.moved)return;
+ const p=screenToWorld(t.clientX,t.clientY);
+ if(buildingMode){placeBuilding(p.x,p.y);return;}
+ const o=pickTouch(p.x,p.y);
+ if(mobileMode==='move'){
+   issueOrder(p.x,p.y,o);setMobileMode('select');openPanel(false);return;
+ }
+ // Tap a friendly troop or building: select it. Tap terrain/enemy/resource: command the selected troop.
+ if(o&&o.team===clan){
+   selected=[o];ui();openPanel(false);
+   if(o.speed)toastMsg('Einheit gewählt – jetzt Ziel auf der Karte antippen');
+ }else if(selected.some(u=>u.team===clan&&u.speed)){
+   issueOrder(p.x,p.y,o);openPanel(false);
+ }else if(o){selected=[o];ui();openPanel(false)}
+ else{toastMsg('Soldaten antippen und danach den Zielpunkt wählen');}
+},{passive:false});
 
 const mapOverlay=gid('mapOverlay'),mapCanvas=gid('strategicMap'),mapCtx=mapCanvas.getContext('2d');
 function openMap(){if(clan===null)return;mapOverlay.style.display='flex';paintMap()}
