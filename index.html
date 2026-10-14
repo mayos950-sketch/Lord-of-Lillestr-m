@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Lord of Lillestrøm – Touch & Terrain Update</title>
+<title>Lord of Lillestrøm – Standort & Laufbewegung</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;background:#081013;color:#efe6c5;font:14px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -184,6 +184,7 @@ body.mobile #hint{display:none!important}
   </div>
 </div>
 <canvas id="minimap" width="170" height="126"></canvas>
+<div id="locationTag" style="display:none;position:fixed;right:8px;bottom:95px;z-index:4;background:#11191cd9;border:1px solid #8b7a4f;border-radius:7px;padding:4px 7px;color:#eee0b7;font:11px system-ui;pointer-events:none">📍 Lillestrøm – fiktiver Sektor</div>
 <div id="toast"></div>
 <div id="mapOverlay"><div id="mapPanel"><div id="mapTitle">🗺 LILLESTRØM KOMMUNE – ENTDECKUNGSKARTE <button id="mapClose">✕</button></div><canvas id="strategicMap"></canvas><div id="mapHelp">Nur erkundete Gebiete werden gezeigt. Die Karte antippen, um zu einem entdeckten Gebiet zu springen. ⚑ Leiraveien 7: letzter Gegner nach den drei Clans.</div></div></div>
 
@@ -297,7 +298,7 @@ function addBuilding(team,x,y,type){const d=buildingDefs[type]; const b={id:++ui
 function addNode(type,x,y,amount){nodes.push({id:++uid,type,x,y,amount,max:amount,r:type==='cache'?25:30})}
 
 function initGame(idx){clan=idx;credits=250;units=[];buildings=[];nodes=[];selected=[];effects=[];uid=0;gameTime=0;paused=false;gameSpeed=1;buildingMode=null;win=0;granFound=false;tech={weapons:0,armor:0,logistics:0}; explored.fill(0);visible.fill(0); groups={}; comicScene=null; lastEnemyComic=-99999; lastPlayerComic=-99999; finalStage=false;castle=null;lastAttackByTeam={};
- modal.style.display='none';if(isTouch)hud.hint.style.display='none';
+ modal.style.display='none';gid('locationTag').style.display='block';gid('locationTag').textContent='📍 '+(['Südwest','Nordost','Südost','Nordwest'][idx])+'-Sektor · fiktive Lillestrøm-Karte';if(isTouch)hud.hint.style.display='none';
  startBases.forEach((b,i)=>{addBuilding(i,b.x,b.y,'hq'); addUnit(i,b.x-50,b.y+92,'engineer'); addUnit(i,b.x+35,b.y+96,'engineer'); addUnit(i,b.x-18,b.y+42,'scout'); addUnit(i,b.x-62,b.y+140,'soldier'); addUnit(i,b.x+68,b.y+142,'soldier'); if(i!==2)addUnit(i,b.x+4,b.y-36,'boss');else addUnit(i,b.x+4,b.y-36,'soldier');});
  addBuilding(-1,1900,1500,'gran');
  for(let i=0;i<28;i++){let x=rand(220,W-220),y=rand(220,H-220); if(terrainAt(x,y)!=='water') addNode(i%4===0?'cache':'scrap',x,y,180+Math.floor(rand(0,180)));}
@@ -433,6 +434,8 @@ function drawUnit(u){
  if(u.team!==clan&&!sees(u.x,u.y))return;
  const isVehicle=u.type==='tank', isBoss=u.type==='boss';
  const size=isVehicle?85:(u.type==='heavy'?65:(isBoss?65:52));
+ const isWalking=!!u.target&&Math.hypot(u.target.x-u.x,u.target.y-u.y)>5;
+ const stepPhase=(gameTime*0.018+u.id*1.3);
  ctx.save();ctx.translate(u.x,u.y);
  ctx.fillStyle='rgba(0,0,0,.42)';ctx.beginPath();ctx.ellipse(6,14,size*.4,size*.16,0,0,TAU);ctx.fill();
  if(u.team===clan&&u.target&&selected.includes(u)){ctx.save();ctx.strokeStyle='rgba(250,226,142,.65)';ctx.lineWidth=2;ctx.setLineDash([7,6]);ctx.beginPath();ctx.moveTo(0,5);ctx.lineTo(u.target.x-u.x,u.target.y-u.y);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
@@ -444,7 +447,12 @@ function drawUnit(u){
  else if(sprite&&sprite.complete&&sprite.naturalWidth>4){
     const aspect=sprite.naturalWidth/sprite.naturalHeight;
     const h=isVehicle?70:(isBoss?71:59),w=Math.min(isVehicle?108:90,h*aspect);
-    ctx.drawImage(sprite,-w*.5,-h+14,w,h);
+    // Existing artwork is a static raster: a subtle gait effect helps convey movement,
+    // but true independently animated arms/legs require new multi-frame sprites.
+    const bob=isWalking&&!isVehicle?Math.abs(Math.sin(stepPhase))*3.2:0;
+    const lean=isWalking&&!isVehicle?Math.sin(stepPhase)*0.055:0;
+    ctx.save();ctx.translate(0,-bob);ctx.rotate(lean);
+    ctx.drawImage(sprite,-w*.5,-h+14,w,h);ctx.restore();
  }else{
    ctx.fillStyle=clanDefs[u.team].color;
    ctx.fillRect(-9,-18,18,27);ctx.fillStyle='#e5dbbe';ctx.beginPath();ctx.arc(0,-24,7,0,TAU);ctx.fill();
