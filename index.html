@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Lord of Lillestrøm – Spiel mit Figuren</title>
+<title>Lord of Lillestrøm – Touch & Terrain Update</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;background:#081013;color:#efe6c5;font:14px system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -126,6 +126,30 @@ body.mobile #comicCard{max-height:94dvh;overflow:auto}
   body.mobile #panel.collapsed{display:none}
   body.mobile #buildInfo{left:9px;right:9px;top:55px;font-size:11px}
 }
+
+/* V12: compact RTS interface */
+body.mobile #quest{display:none!important}
+body.mobile #hudTop{height:42px!important;padding:3px 7px!important;background:#0b1519eb!important;border-bottom:1px solid #8b7147}
+body.mobile #title{max-width:30vw!important;font-size:11px!important}
+body.mobile #hudTop #mapBtn{min-width:66px!important;padding:5px 7px!important;font-size:11px!important}
+body.mobile #hudStats{font-size:11px!important}
+body.mobile #mobileTools{top:49px!important;left:auto!important;right:7px!important;display:grid!important;grid-template-columns:repeat(2,49px);width:106px;gap:5px!important;pointer-events:none!important}
+body.mobile #mobileTools button{width:49px!important;height:45px!important;min-width:0!important;min-height:0!important;font-size:0!important;padding:4px!important;border-radius:9px!important;background:linear-gradient(#35474b,#172229)!important;border:1px solid #877d5e!important;box-shadow:0 3px 8px #0009}
+body.mobile #mobileTools button.active{border-color:#f5da86!important;background:linear-gradient(#6b7751,#36462b)!important}
+body.mobile #mobileTools button::first-letter{font-size:0!important}
+body.mobile #mobileTools button:after{content:attr(data-icon);display:block;font-size:23px;line-height:32px}
+body.mobile #bottomWrap{left:6px!important;right:6px!important;bottom:max(4px,env(safe-area-inset-bottom))!important}
+body.mobile #bottomTab{background:#17252aeF!important;border-color:#9b8257!important;min-height:36px!important;padding:7px 18px!important;border-radius:11px!important;font-size:12px!important}
+body.mobile #panel{max-height:min(32vh,220px)!important;display:flex;flex-wrap:nowrap!important;padding:7px!important;gap:7px!important;overflow:hidden;background:#0c181def!important;border:1px solid #917b53!important}
+body.mobile #panel.collapsed{display:none!important}
+body.mobile #portrait{flex:0 0 94px!important;min-width:0!important;width:94px!important;overflow:hidden;font-size:11px!important;color:#f0d38d}
+body.mobile #details{display:none!important}
+body.mobile #actions{flex:1 1 auto!important;min-width:0!important;width:auto!important;flex-basis:auto!important;max-width:none!important;display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:6px!important;-webkit-overflow-scrolling:touch}
+body.mobile #actions button{font-size:11px!important;min-height:43px!important;padding:7px 9px!important;flex:0 0 auto!important;white-space:nowrap!important}
+body.mobile #toast{max-width:68vw;font-size:12px;text-align:center;top:99px}
+body.mobile #buildInfo{top:auto!important;bottom:78px!important;left:8px!important;right:8px!important;text-align:center}
+body.mobile #hint{display:none!important}
+#startCard .sub{line-height:1.35}
 </style>
 </head>
 <body>
@@ -196,6 +220,7 @@ if(isTouch) document.body.classList.add('mobile');
 const hud={faction:gid('faction'),res:gid('res'),army:gid('army'),buildings:gid('buildingsStat'),peace:gid('peace'),portrait:gid('portrait'),details:gid('details'),actions:gid('actions'),tab:gid('bottomTab'),panel:gid('panel'),hint:gid('hint'),buildInfo:gid('buildInfo')};
 const toast=gid('toast');
 const mobile={select:gid('mobileSelect'),move:gid('mobileMove'),hq:gid('mobileHQ'),all:gid('mobileAll')};
+[['select','👆'],['move','🎯'],['hq','🏠'],['all','⚔️']].forEach(([key,icon])=>{mobile[key].dataset.icon=icon;mobile[key].title={select:'Auswählen',move:'Bewegen und Angreifen',hq:'Zum Hauptquartier',all:'Alle Soldaten'}[key]});
 const pauseBtn=gid('pauseBtn'),speedBtn=gid('speedBtn');
 const modal=gid('modal'),clanGrid=gid('clanGrid');
 const comic={root:gid('comic'),top:gid('comicTopline'),timer:gid('comicTimer'),face:gid('comicFace'),name:gid('comicName'),alert:gid('comicAlert'),speech:gid('comicSpeech'),story:gid('comicStory'),sfx:gid('comicSfx'),skip:gid('comicSkip')};
@@ -278,7 +303,7 @@ function initGame(idx){clan=idx;credits=250;units=[];buildings=[];nodes=[];selec
  for(let i=0;i<28;i++){let x=rand(220,W-220),y=rand(220,H-220); if(terrainAt(x,y)!=='water') addNode(i%4===0?'cache':'scrap',x,y,180+Math.floor(rand(0,180)));}
  cam.x=startBases[idx].x-innerWidth/(2*cam.z); cam.y=startBases[idx].y-innerHeight/(2*cam.z);
  selected=[units.find(u=>u.team===clan && u.type==='scout')];
- updateVision(); setMobileMode('select'); if(isTouch) openPanel(false); ui(); toastMsg('Erkunde die Umgebung, finde Vorräte und baue deine Festung aus!'); }
+ updateVision(); setMobileMode('select'); if(isTouch) openPanel(false); ui(); toastMsg('Erkunde die Karte und baue deine Festung!'); }
 
 clanDefs.slice(0,4).forEach((c,i)=>{const btn=document.createElement('button'); btn.className='clanBtn'; btn.style.background=`linear-gradient(135deg,${c.color},${c.dark})`; btn.innerHTML=`<span class="icon">${c.icon}</span><b>${c.name}</b><small>${c.desc}</small><em>${c.leader}</em>`; const start=(e)=>{e.preventDefault(); e.stopPropagation(); initGame(i)}; btn.addEventListener('click',start); clanGrid.appendChild(btn);});
 
@@ -351,6 +376,19 @@ function drawBuilding(b){if((b.type==='gran'||b.type==='castle') && !knows(b.x,b
    isoBlock(-66,-36,132,72,'#353a3c','#4f575a'); ctx.fillStyle='#1a1f23'; ctx.fillRect(-58,-48,116,16); ctx.fillStyle='#f5cf7f'; ctx.font='bold 20px system-ui'; ctx.textAlign='center'; ctx.fillText('⚒ GRAN',0,-52); ctx.fillStyle='#796849'; ctx.fillRect(-30,-8,60,30);
  }
 
+ // Volumetric-looking rooftops, industrial grilles and lit windows
+ if(b.type==='hq'||b.type==='barracks'||b.type==='gran'){
+   const a=b.type==='hq'?72:b.type==='barracks'?46:61;
+   ctx.fillStyle='#151a1f';ctx.beginPath();ctx.moveTo(-a-2,-32);ctx.lineTo(-a+15,-57);ctx.lineTo(a-10,-57);ctx.lineTo(a+4,-32);ctx.closePath();ctx.fill();
+   ctx.fillStyle=b.type==='gran'?'#61543d':'#53616a';ctx.beginPath();ctx.moveTo(-a+5,-36);ctx.lineTo(-a+20,-53);ctx.lineTo(a-18,-53);ctx.lineTo(a-4,-36);ctx.closePath();ctx.fill();
+   ctx.strokeStyle='#b1a27d';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-a+20,-53);ctx.lineTo(a-18,-53);ctx.stroke();
+   ctx.fillStyle='#d9a863';for(let w=-a+12;w<a-14;w+=25){ctx.fillRect(w,-15,9,14);ctx.fillStyle='#ffe0a2';ctx.fillRect(w+2,-13,5,3);ctx.fillStyle='#d9a863'}
+   ctx.fillStyle='#252729';ctx.fillRect(a-25,-69,17,19);ctx.fillStyle='#96918a';ctx.fillRect(a-23,-76,13,8);
+ }
+ if(b.type==='tower'){
+   ctx.fillStyle='#1a2226';ctx.fillRect(-19,-56,38,20);ctx.fillStyle=col;ctx.fillRect(-21,-62,42,7);
+   ctx.fillStyle='#e6c77b';ctx.fillRect(-4,-68,8,7);
+ }
  // Detailed crenellations, windows, metal trim and a faction standard.
  if(['hq','barracks','castle','gran'].includes(b.type)){
   const width=b.type==='castle'?210:b.type==='hq'?145:b.type==='gran'?124:92;
@@ -535,9 +573,10 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault()); canvas.addEventLis
 window.addEventListener('keydown',e=>{keys[e.key]=true; if(e.key==='Escape'){buildingMode=null; hud.buildInfo.style.display='none'; selected=[]; ui()} if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault(); if(e.code==='Space'&&!e.repeat){pauseBtn.click()} if(clan!==null&&e.key.toLowerCase()==='h'){mobile.hq.click()} if(clan!==null&&/^[1-5]$/.test(e.key)){if(e.ctrlKey||e.metaKey){groups[e.key]=selected.filter(u=>u.team===clan&&u.speed).map(u=>u.id); toastMsg('Gruppe '+e.key+' gespeichert'); e.preventDefault()} else {selected=units.filter(u=>groups[e.key]?.includes(u.id)&&u.team===clan); if(selected.length){const u=selected[0]; cam.x=clamp(u.x-innerWidth/(2*cam.z),0,W-innerWidth/cam.z); cam.y=clamp(u.y-innerHeight/(2*cam.z),0,H-innerHeight/cam.z); ui();} e.preventDefault()}}});
 window.addEventListener('keyup',e=>keys[e.key]=false); window.addEventListener('blur',()=>keys={});
 
-canvas.addEventListener('touchstart',e=>{if(clan===null||e.touches.length!==1) return; e.preventDefault(); const t=e.touches[0]; touchDrag={x:t.clientX,y:t.clientY,cx:cam.x,cy:cam.y,moved:false}; mouseWorld=screenToWorld(t.clientX,t.clientY)}, {passive:false});
-canvas.addEventListener('touchmove',e=>{if(!touchDrag||e.touches.length!==1) return; e.preventDefault(); const t=e.touches[0]; mouseWorld=screenToWorld(t.clientX,t.clientY); const dx=t.clientX-touchDrag.x,dy=t.clientY-touchDrag.y; if(Math.hypot(dx,dy)>12) touchDrag.moved=true; if(touchDrag.moved){cam.x=clamp(touchDrag.cx-dx/cam.z,0,Math.max(0,W-innerWidth/cam.z)); cam.y=clamp(touchDrag.cy-dy/cam.z,0,Math.max(0,H-innerHeight/cam.z));}}, {passive:false});
-canvas.addEventListener('touchend',e=>{if(!touchDrag||clan===null) return; e.preventDefault(); const t=e.changedTouches[0]; const start=touchDrag; touchDrag=null; if(start.moved) return; const p=screenToWorld(t.clientX,t.clientY); if(buildingMode){placeBuilding(p.x,p.y); return;} const o=pick(p.x,p.y); if(mobileMode==='move'){issueOrder(p.x,p.y,o); setMobileMode('select')} else {selected=o&&(o.team===clan||o.type==='gran'||o.type==='scrap'||o.type==='cache')?[o]:[]; ui(); openPanel(!!selected.length)}}, {passive:false});
+let pinch=null;
+canvas.addEventListener('touchstart',e=>{if(clan===null)return; if(e.touches.length===2){e.preventDefault();const a=e.touches[0],b=e.touches[1],cx=(a.clientX+b.clientX)/2,cy=(a.clientY+b.clientY)/2;pinch={dist:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:cam.z,world:screenToWorld(cx,cy)};touchDrag=null;return;} if(e.touches.length!==1)return; e.preventDefault(); const t=e.touches[0]; touchDrag={x:t.clientX,y:t.clientY,cx:cam.x,cy:cam.y,moved:false}; mouseWorld=screenToWorld(t.clientX,t.clientY)}, {passive:false});
+canvas.addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2){e.preventDefault();const a=e.touches[0],b=e.touches[1],cx=(a.clientX+b.clientX)/2,cy=(a.clientY+b.clientY)/2,dist=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);cam.z=clamp(pinch.z*dist/Math.max(1,pinch.dist),.62,1.95);cam.x=clamp(pinch.world.x-cx/cam.z,0,Math.max(0,W-innerWidth/cam.z));cam.y=clamp(pinch.world.y-cy/cam.z,0,Math.max(0,H-innerHeight/cam.z));return;} if(!touchDrag||e.touches.length!==1)return; e.preventDefault(); const t=e.touches[0]; mouseWorld=screenToWorld(t.clientX,t.clientY); const dx=t.clientX-touchDrag.x,dy=t.clientY-touchDrag.y; if(Math.hypot(dx,dy)>12) touchDrag.moved=true; if(touchDrag.moved){cam.x=clamp(touchDrag.cx-dx/cam.z,0,Math.max(0,W-innerWidth/cam.z)); cam.y=clamp(touchDrag.cy-dy/cam.z,0,Math.max(0,H-innerHeight/cam.z));}}, {passive:false});
+canvas.addEventListener('touchend',e=>{if(pinch){e.preventDefault();if(e.touches.length<2)pinch=null;return;} if(!touchDrag||clan===null)return; e.preventDefault(); const t=e.changedTouches[0]; const start=touchDrag; touchDrag=null; if(start.moved) return; const p=screenToWorld(t.clientX,t.clientY); if(buildingMode){placeBuilding(p.x,p.y); return;} const o=pick(p.x,p.y); if(mobileMode==='move'){issueOrder(p.x,p.y,o);setMobileMode('select');openPanel(false)} else if(o&&(o.team===clan||o.type==='gran'||o.type==='scrap'||o.type==='cache')){if(o.team===clan){selected=[o];ui();openPanel(true)}else if(selected.some(u=>u.team===clan&&u.speed)){issueOrder(p.x,p.y,o);openPanel(false)}else{selected=[o];ui();openPanel(true)}} else if(selected.some(u=>u.team===clan&&u.speed)){issueOrder(p.x,p.y,null);openPanel(false)} else {selected=[];ui();openPanel(false)}}, {passive:false});
 
 const mapOverlay=gid('mapOverlay'),mapCanvas=gid('strategicMap'),mapCtx=mapCanvas.getContext('2d');
 function openMap(){if(clan===null)return;mapOverlay.style.display='flex';paintMap()}
